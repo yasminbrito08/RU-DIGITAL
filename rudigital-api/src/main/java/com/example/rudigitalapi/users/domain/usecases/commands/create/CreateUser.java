@@ -1,22 +1,36 @@
 package com.example.rudigitalapi.users.domain.usecases.commands.create;
 
-import com.example.rudigitalapi.users.infra.commands.IPersistUserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ForkJoinPool;
+import com.example.rudigitalapi.shared.exceptions.ConflictException;
+import com.example.rudigitalapi.users.infra.commands.IPersistUserRepository;
+import com.example.rudigitalapi.users.infra.repositories.IUserJpaRepository;
 
-public class CreateUser implements ICreateUser{
-    private IPersistUserRepository persistUserRepository;
-    private PasswordEncoder passwordEncoder;
+@Component
+public class CreateUser implements ICreateUser {
+
+    private final IPersistUserRepository persistUserRepository;
+    private final IUserJpaRepository userJpaRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public CreateUser(
+            IPersistUserRepository persistUserRepository,
+            IUserJpaRepository userJpaRepository,
+            PasswordEncoder passwordEncoder
+    ) {
+        this.persistUserRepository = persistUserRepository;
+        this.userJpaRepository = userJpaRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
     public CreateUserOutput execute(CreateUserInput input) {
-        String passwordHash = CompletableFuture.supplyAsync(() -> {
-            return passwordEncoder.encode(input.password());
-        }, ForkJoinPool.commonPool()).join();
+        if (userJpaRepository.existsByLogin(input.login())) {
+            throw new ConflictException("Login already in use");
+        }
 
+        String passwordHash = passwordEncoder.encode(input.password());
         return persistUserRepository.persist(input, passwordHash);
     }
-
 }

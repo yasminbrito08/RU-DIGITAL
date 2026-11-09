@@ -14,26 +14,31 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table (name = "users")
+@Table(name = "users")
 public class UserEntity {
-    @Id 
+
+    @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    /**
+     * Same value used on student/employee registration and on auth login.
+     * Column kept as "username" for compatibility with existing schema.
+     */
+    @Column(nullable = false, unique = true, name = "username")
     private String login;
 
-    @Column(nullable = false)
+    @Column(nullable = false, name = "password_hash")
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING)
-    @Column 
-    private UserType userType;
-
-    @Column(nullable = false)
+    @Column(nullable = false, name = "is_active")
     private Boolean isActive;
 
-    public UUID getId(){
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, name = "user_type")
+    private UserType userType;
+
+    public UUID getId() {
         return id;
     }
 
@@ -53,19 +58,19 @@ public class UserEntity {
         this.passwordHash = passwordHash;
     }
 
-    public UserType getUserType() {
-        return userType;
-    }
-
-    public void setUserType(UserType userType) {
-        this.userType = userType;
-    }
-
     public Boolean getActive() {
         return isActive;
     }
 
     public void setIsActive(Boolean active) {
         isActive = active;
+    }
+
+    public UserType getUserType() {
+        return userType;
+    }
+
+    public void setUserType(UserType userType) {
+        this.userType = userType;
     }
 }

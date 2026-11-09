@@ -1,24 +1,49 @@
 package com.example.rudigitalapi.auth.domain.usecases.commands.login;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import com.example.rudigitalapi.auth.infra.tokens.RefreshTokenService;
+import com.example.rudigitalapi.security.jwt.JwtService;
+import com.example.rudigitalapi.shared.exceptions.InvalidCredentialsException;
+import com.example.rudigitalapi.users.infra.queries.IGetUser;
+
 @Component
-public class Login implements ILogin{
-    //private loaduseridentity
-    //private passwordEncoder
-    //refreshTokenService
+public class Login implements ILogin {
+
+    private final IGetUser getUser;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
+
+    public Login(
+            IGetUser getUser,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            RefreshTokenService refreshTokenService
+    ) {
+        this.getUser = getUser;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.refreshTokenService = refreshTokenService;
+    }
 
     @Override
     public LoginOutput execute(LoginInput input) {
-        //faz a busca do usuario by input.login
+        IGetUser.UserIdentity user = getUser.byLogin(input.login())
+                .orElseThrow(InvalidCredentialsException::new);
 
-        //verifica se ela está ativa, e se não tiver dá um throw invalidCredentials
+        if (!Boolean.TRUE.equals(user.isActive())) {
+            throw new InvalidCredentialsException();
+        }
 
-        //verifica se o password dá metch, se não, dá invalidCredentials
+        if (!passwordEncoder.matches(input.password(), user.passwordHash())) {
+            throw new InvalidCredentialsException();
+        }
 
-        //tokens
+        String accessToken = jwtService.generateAccessToken(user.id(), user.userType());
+        String refreshToken = refreshTokenService.create(user.id());
 
-        //retorna tokens e refreshtokens
-        return null;
+        return new LoginOutput(accessToken, refreshToken);
     }
 }
